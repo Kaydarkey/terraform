@@ -36,6 +36,7 @@ pipeline {
                                   secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     // Ensure we're using aws cli v2 if available
                     sh 'aws --version'
+                    sh 'echo $AWS_ACCESS_KEY_ID'
                     
                     // Use explicit region with command
                     sh 'aws sts get-caller-identity --region ${AWS_REGION}'
