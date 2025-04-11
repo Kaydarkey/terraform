@@ -17,10 +17,26 @@ pipeline {
             }
         }
         
+        stage('Setup AWS Credentials') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                  credentialsId: 'aws-credentials', 
+                                  accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
+                                  secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    sh 'aws sts get-caller-identity'
+                }
+            }
+        }
+        
         stage('Initialize') {
             steps {
-                dir("environments/${params.ENVIRONMENT}") {
-                    sh 'terraform init'
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                  credentialsId: 'aws-credentials', 
+                                  accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
+                                  secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    dir("environments/${params.ENVIRONMENT}") {
+                        sh 'terraform init'
+                    }
                 }
             }
         }
@@ -30,8 +46,13 @@ pipeline {
                 expression { params.ACTION == 'plan' || params.ACTION == 'apply' }
             }
             steps {
-                dir("environments/${params.ENVIRONMENT}") {
-                    sh 'terraform plan -out=tfplan'
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                  credentialsId: 'aws-credentials', 
+                                  accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
+                                  secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    dir("environments/${params.ENVIRONMENT}") {
+                        sh 'terraform plan -out=tfplan'
+                    }
                 }
             }
         }
@@ -50,8 +71,13 @@ pipeline {
                 expression { params.ACTION == 'apply' }
             }
             steps {
-                dir("environments/${params.ENVIRONMENT}") {
-                    sh 'terraform apply -auto-approve tfplan'
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                  credentialsId: 'aws-credentials', 
+                                  accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
+                                  secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    dir("environments/${params.ENVIRONMENT}") {
+                        sh 'terraform apply -auto-approve tfplan'
+                    }
                 }
             }
         }
@@ -61,8 +87,13 @@ pipeline {
                 expression { params.ACTION == 'destroy' }
             }
             steps {
-                dir("environments/${params.ENVIRONMENT}") {
-                    sh 'terraform destroy -auto-approve'
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                  credentialsId: 'aws-credentials', 
+                                  accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
+                                  secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    dir("environments/${params.ENVIRONMENT}") {
+                        sh 'terraform destroy -auto-approve'
+                    }
                 }
             }
         }
@@ -72,8 +103,13 @@ pipeline {
                 expression { params.ACTION == 'apply' }
             }
             steps {
-                dir("environments/${params.ENVIRONMENT}") {
-                    sh 'terraform output'
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                  credentialsId: 'aws-credentials', 
+                                  accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
+                                  secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    dir("environments/${params.ENVIRONMENT}") {
+                        sh 'terraform output'
+                    }
                 }
             }
         }
