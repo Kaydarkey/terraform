@@ -8,6 +8,10 @@ pipeline {
     
     environment {
         AWS_REGION = 'eu-west-1'
+        // Force AWS SDK to use a specific region
+        AWS_DEFAULT_REGION = 'eu-west-1'
+        // Add this to fix potential encoding issues
+        PYTHONIOENCODING = 'UTF-8'
     }
     
     stages {
@@ -17,13 +21,24 @@ pipeline {
             }
         }
         
+        stage('Debug Environment') {
+            steps {
+                sh 'date'  // Check server time
+                sh 'env | grep -v KEY | grep -v SECRET'  // Print environment variables (excluding sensitive data)
+            }
+        }
+        
         stage('Setup AWS Credentials') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
                                   credentialsId: 'aws-credentials', 
                                   accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
                                   secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    sh 'aws sts get-caller-identity'
+                    // Ensure we're using aws cli v2 if available
+                    sh 'aws --version'
+                    
+                    // Use explicit region with command
+                    sh 'aws sts get-caller-identity --region ${AWS_REGION}'
                 }
             }
         }
@@ -35,6 +50,7 @@ pipeline {
                                   accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
                                   secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     dir("environments/${params.ENVIRONMENT}") {
+                        sh 'terraform version'
                         sh 'terraform init'
                     }
                 }
