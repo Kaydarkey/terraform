@@ -22,11 +22,12 @@ pipeline {
                 echo "Initializing and validating Terraform for ${params.ENVIRONMENT} environment"
                 
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
-                    sh '''
+                    sh """
+                        cd environments/${params.ENVIRONMENT}
                         terraform init
                         terraform fmt -recursive
                         terraform validate
-                    '''
+                    """
                 }
             }
         }
@@ -37,6 +38,7 @@ pipeline {
                 
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
                     sh """
+                        cd environments/${params.ENVIRONMENT}
                         terraform workspace select ${params.ENVIRONMENT} || terraform workspace new ${params.ENVIRONMENT}
                     """
                 }
@@ -49,6 +51,7 @@ pipeline {
                 
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
                     sh """
+                        cd environments/${params.ENVIRONMENT}
                         terraform plan -var="environment=${params.ENVIRONMENT}" -out=tfplan
                     """
                 }
@@ -69,9 +72,10 @@ pipeline {
                 echo "Applying Terraform changes to ${params.ENVIRONMENT} environment"
                 
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
-                    sh '''
+                    sh """
+                        cd environments/${params.ENVIRONMENT}
                         terraform apply -auto-approve tfplan
-                    '''
+                    """
                 }
             }
         }
@@ -85,6 +89,7 @@ pipeline {
 
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
                     sh """
+                        cd environments/${params.ENVIRONMENT}
                         terraform destroy -auto-approve -var="environment=${params.ENVIRONMENT}"
                     """
                 }
@@ -102,7 +107,6 @@ pipeline {
         }
         failure {
             echo "Terraform deployment (or destruction) failed for ${params.ENVIRONMENT} environment."
-            // You could add notification steps here, like email or Slack notifications
         }
     }
 }
