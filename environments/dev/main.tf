@@ -51,7 +51,7 @@ module "security_groups" {
 
 module "ec2_app" {
   source               = "../../modules/ec2"
-  ami_id               = "ami-0c55b159cbfafe1f0" #AMI ID for eu-west-1
+  ami_id               = "ami-0df368112825f8d8f" #AMI ID for eu-west-1
   instance_type        = "t2.micro"
   subnet_id            = module.vpc.public_subnet_ids[0]
   vpc_security_group_ids = [module.security_groups.web_security_group_id]
