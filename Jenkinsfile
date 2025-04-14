@@ -6,6 +6,7 @@ pipeline {
     }
 
     parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'prod'], description: 'Environment to deploy (dev or prod)')
         booleanParam(name: 'DESTROY_INFRASTRUCTURE', defaultValue: false, description: 'Destroy infrastructure after apply?')
     }
 
