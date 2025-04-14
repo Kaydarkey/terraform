@@ -52,7 +52,7 @@ pipeline {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
                     sh """
                         cd environments/${params.ENVIRONMENT}
-                        terraform plan -var="environment=${params.ENVIRONMENT}" -out=tfplan
+                        terraform plan -out=tfplan
                     """
                 }
             }
@@ -90,7 +90,7 @@ pipeline {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
                     sh """
                         cd environments/${params.ENVIRONMENT}
-                        terraform destroy -auto-approve -var="environment=${params.ENVIRONMENT}"
+                        terraform destroy -auto-approve
                     """
                 }
             }
