@@ -58,7 +58,7 @@ module "ec2_app" {
   instance_name          = "prod-app-server"
   ami_id                 = "ami-0df368112825f8d8f" # Update with latest Ubuntu Server
   instance_type          = "t3.medium"  # Larger instance for production
-  key_name               = "prod-key"
+  key_name               = "lamp"
   subnet_id              = module.vpc.public_subnet_ids[0]
   vpc_security_group_ids = [module.security_groups.web_security_group_id]
   

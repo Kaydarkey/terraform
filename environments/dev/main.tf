@@ -55,7 +55,7 @@ module "ec2_app" {
   instance_type        = "t2.micro"
   subnet_id            = module.vpc.public_subnet_ids[0]
   vpc_security_group_ids = [module.security_groups.web_security_group_id]
-  key_name             = "my-key-pair" # Optional, replace or remove
+  key_name             = "flask" # Optional, replace or remove
   instance_name        = "my-app-instance"
   docker_image         = "nginx:latest"
   docker_container_port = "80"
