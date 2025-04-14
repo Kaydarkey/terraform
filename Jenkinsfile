@@ -19,9 +19,8 @@ pipeline {
 
         stage('Terraform Init & Validate') {
             steps {
-                echo "Initializing and validating Terraform"
+                echo "Initializing and validating Terraform for ${params.ENVIRONMENT} environment"
                 
-                // Use withCredentials directly in the stage
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
                     sh '''
                         terraform init
@@ -32,21 +31,42 @@ pipeline {
             }
         }
 
-        stage('Terraform Plan') {
+        stage('Select Workspace') {
             steps {
-                echo "Generating Terraform plan"
+                echo "Selecting workspace for ${params.ENVIRONMENT} environment"
                 
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
-                    sh '''
-                        terraform plan -out=tfplan
-                    '''
+                    sh """
+                        terraform workspace select ${params.ENVIRONMENT} || terraform workspace new ${params.ENVIRONMENT}
+                    """
                 }
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                echo "Generating Terraform plan for ${params.ENVIRONMENT} environment"
+                
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
+                    sh """
+                        terraform plan -var="environment=${params.ENVIRONMENT}" -out=tfplan
+                    """
+                }
+            }
+        }
+
+        stage('Approval') {
+            when {
+                expression { params.ENVIRONMENT == 'prod' }
+            }
+            steps {
+                input message: 'Approve deployment to production?', ok: 'Deploy to Production'
             }
         }
 
         stage('Terraform Apply') {
             steps {
-                echo "Applying Terraform changes"
+                echo "Applying Terraform changes to ${params.ENVIRONMENT} environment"
                 
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
                     sh '''
@@ -61,12 +81,12 @@ pipeline {
                 expression { params.DESTROY_INFRASTRUCTURE }
             }
             steps {
-                echo "Destroying Terraform infrastructure"
+                echo "Destroying Terraform infrastructure in ${params.ENVIRONMENT} environment"
 
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
-                    sh '''
-                        terraform destroy -auto-approve
-                    '''
+                    sh """
+                        terraform destroy -auto-approve -var="environment=${params.ENVIRONMENT}"
+                    """
                 }
             }
         }
@@ -74,13 +94,15 @@ pipeline {
 
     post {
         always {
-            echo "Terraform execution complete."
+            echo "Terraform execution complete for ${params.ENVIRONMENT} environment."
+            cleanWs()
         }
         success {
-            echo "Terraform deployment (or destruction) successful."
+            echo "Terraform deployment (or destruction) successful for ${params.ENVIRONMENT} environment."
         }
         failure {
-            echo "Terraform deployment (or destruction) failed."
+            echo "Terraform deployment (or destruction) failed for ${params.ENVIRONMENT} environment."
+            // You could add notification steps here, like email or Slack notifications
         }
     }
 }
