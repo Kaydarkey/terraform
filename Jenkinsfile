@@ -1,146 +1,85 @@
 pipeline {
     agent any
-    
-    parameters {
-        choice(name: 'ENVIRONMENT', choices: ['dev', 'prod'], description: 'Environment to deploy')
-        choice(name: 'ACTION', choices: ['plan', 'apply', 'destroy'], description: 'Terraform action to execute')
-    }
-    
+
     environment {
-        AWS_REGION = 'eu-west-1'
-        // Force AWS SDK to use a specific region
         AWS_DEFAULT_REGION = 'eu-west-1'
-        // Add this to fix potential encoding issues
-        PYTHONIOENCODING = 'UTF-8'
     }
-    
+
+    parameters {
+        booleanParam(name: 'DESTROY_INFRASTRUCTURE', defaultValue: false, description: 'Destroy infrastructure after apply?')
+    }
+
     stages {
-        stage('Checkout') {
+        stage('Pull Code') {
             steps {
-                checkout scm
+                git branch: 'main', poll: false, url: 'https://github.com/Kaydarkey/terraform.git'
             }
         }
-        
-        stage('Debug Environment') {
+
+        stage('Terraform Init & Validate') {
             steps {
-                sh 'date'  // Check server time
-                sh 'env | grep -v KEY | grep -v SECRET'  // Print environment variables (excluding sensitive data)
-            }
-        }
-        
-        stage('Setup AWS Credentials') {
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
-                                  credentialsId: 'aws-credentials', 
-                                  accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
-                                  secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    // Ensure we're using aws cli v2 if available
-                    sh 'aws --version'
-                    sh 'echo $AWS_ACCESS_KEY_ID'
-                    
-                    // Use explicit region with command
-                    sh 'aws sts get-caller-identity --region ${AWS_REGION}'
+                echo "Initializing and validating Terraform"
+                
+                // Use withCredentials directly in the stage
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
+                    sh '''
+                        terraform init
+                        terraform fmt -recursive
+                        terraform validate
+                    '''
                 }
             }
         }
-        
-        stage('Initialize') {
+
+        stage('Terraform Plan') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
-                                  credentialsId: 'aws-credentials', 
-                                  accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
-                                  secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    dir("environments/${params.ENVIRONMENT}") {
-                        sh 'terraform version'
-                        sh 'terraform init'
-                    }
+                echo "Generating Terraform plan"
+                
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
+                    sh '''
+                        terraform plan -out=tfplan
+                    '''
                 }
             }
         }
-        
-        stage('Plan') {
-            when {
-                expression { params.ACTION == 'plan' || params.ACTION == 'apply' }
-            }
+
+        stage('Terraform Apply') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
-                                  credentialsId: 'aws-credentials', 
-                                  accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
-                                  secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    dir("environments/${params.ENVIRONMENT}") {
-                        sh 'terraform plan -out=tfplan'
-                    }
+                echo "Applying Terraform changes"
+                
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
+                    sh '''
+                        terraform apply -auto-approve tfplan
+                    '''
                 }
             }
         }
-        
-        stage('Approval') {
+
+        stage('Terraform Destroy') {
             when {
-                expression { params.ACTION == 'apply' || params.ACTION == 'destroy' }
+                expression { params.DESTROY_INFRASTRUCTURE }
             }
             steps {
-                input message: "Proceed with ${params.ACTION} in ${params.ENVIRONMENT}?"
-            }
-        }
-        
-        stage('Apply') {
-            when {
-                expression { params.ACTION == 'apply' }
-            }
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
-                                  credentialsId: 'aws-credentials', 
-                                  accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
-                                  secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    dir("environments/${params.ENVIRONMENT}") {
-                        sh 'terraform apply -auto-approve tfplan'
-                    }
-                }
-            }
-        }
-        
-        stage('Destroy') {
-            when {
-                expression { params.ACTION == 'destroy' }
-            }
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
-                                  credentialsId: 'aws-credentials', 
-                                  accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
-                                  secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    dir("environments/${params.ENVIRONMENT}") {
-                        sh 'terraform destroy -auto-approve'
-                    }
-                }
-            }
-        }
-        
-        stage('Verify') {
-            when {
-                expression { params.ACTION == 'apply' }
-            }
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
-                                  credentialsId: 'aws-credentials', 
-                                  accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
-                                  secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    dir("environments/${params.ENVIRONMENT}") {
-                        sh 'terraform output'
-                    }
+                echo "Destroying Terraform infrastructure"
+
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
+                    sh '''
+                        terraform destroy -auto-approve
+                    '''
                 }
             }
         }
     }
-    
+
     post {
         always {
-            cleanWs()
+            echo "Terraform execution complete."
         }
         success {
-            echo "Terraform ${params.ACTION} on ${params.ENVIRONMENT} completed successfully!"
+            echo "Terraform deployment (or destruction) successful."
         }
         failure {
-            echo "Terraform ${params.ACTION} on ${params.ENVIRONMENT} failed!"
+            echo "Terraform deployment (or destruction) failed."
         }
     }
 }
