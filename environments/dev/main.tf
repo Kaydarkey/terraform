@@ -50,22 +50,19 @@ module "security_groups" {
 }
 
 module "ec2_app" {
-  source = "../../modules/ec2"
-
-  instance_name          = "dev-app-server"
-  ami_id                 = "ami-0c55b159cbfafe1f0" # Update with latest Amazon Linux 2 AMI for your region
-  instance_type          = "t2.micro"
-  key_name               = "dev-key"
-  subnet_id              = module.vpc.public_subnet_ids[0]
+  source               = "../../modules/ec2"
+  ami_id               = "ami-0c55b159cbfafe1f0" #AMI ID for eu-west-1
+  instance_type        = "t2.micro"
+  subnet_id            = module.vpc.public_subnet_ids[0]
   vpc_security_group_ids = [module.security_groups.web_security_group_id]
-  
+  key_name             = "my-key-pair" # Optional, replace or remove
+  instance_name        = "my-app-instance"
   docker_image         = "nginx:latest"
-  docker_container_port = 80
-  docker_host_port     = 80
-
+  docker_container_port = "80"
+  docker_host_port     = "80"
   tags = {
     Environment = "dev"
-    Application = "demo"
+    Project     = "my-app"
   }
 }
 

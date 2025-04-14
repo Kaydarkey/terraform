@@ -1,68 +1,67 @@
-variable "instance_name" {
-  description = "Name for the EC2 instance"
-  type        = string
-}
-
 variable "ami_id" {
-  description = "AMI ID to use for the instance"
+  description = "The AMI ID for the EC2 instance"
   type        = string
-  default     = "ami-0df368112825f8d8f" # Ubuntu Server
 }
 
 variable "instance_type" {
-  description = "Instance type to use"
+  description = "The EC2 instance type"
   type        = string
-  default     = "t2.micro"
-}
-
-variable "key_name" {
-  description = "SSH key name to use"
-  type        = string
-  default     = ""
 }
 
 variable "subnet_id" {
-  description = "Subnet ID where instance will be launched"
+  description = "The subnet ID for the EC2 instance"
   type        = string
 }
 
 variable "vpc_security_group_ids" {
-  description = "List of security group IDs"
+  description = "List of security group IDs for the EC2 instance"
   type        = list(string)
 }
 
+variable "key_name" {
+  description = "The key pair name for SSH access"
+  type        = string
+  default     = ""
+}
+
 variable "iam_instance_profile" {
-  description = "IAM instance profile name"
+  description = "The IAM instance profile name"
   type        = string
   default     = ""
 }
 
 variable "user_data" {
-  description = "User data script for the instance"
+  description = "Custom user data script"
   type        = string
   default     = ""
 }
 
 variable "docker_image" {
-  description = "Docker image to deploy"
+  description = "Docker image to run on the instance"
   type        = string
-  default     = "nginx:latest"
+  default     = ""
 }
 
 variable "docker_container_port" {
-  description = "Port that the Docker container listens on"
-  type        = number
-  default     = 80
+  description = "Docker container port"
+  type        = string
+  default     = ""
 }
 
 variable "docker_host_port" {
-  description = "Port on the host to map to the Docker container"
-  type        = number
-  default     = 80
+  description = "Docker host port"
+  type        = string
+  default     = ""
+}
+
+variable "instance_name" {
+  description = "Name tag for the EC2 instance"
+  type        = string
+  default     = ""
 }
 
 variable "tags" {
-  description = "Tags to apply to resources"
+  description = "Additional tags for the EC2 instance"
   type        = map(string)
   default     = {}
 }

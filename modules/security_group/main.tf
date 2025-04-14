@@ -84,18 +84,18 @@ resource "aws_security_group" "eks_nodes" {
   description = "Security group for EKS worker nodes"
   vpc_id      = var.vpc_id
 
-  # Allow inter-node communication
+  # Allow inter-node communication - FIXED
   ingress {
     from_port       = 0
-    to_port         = 65535
+    to_port         = 0
     protocol        = "-1"
     self            = true
   }
 
-  # Allow communication with the cluster
+  # Allow communication with the cluster - FIXED
   ingress {
     from_port       = 0
-    to_port         = 65535
+    to_port         = 0
     protocol        = "-1"
     security_groups = [aws_security_group.eks_cluster.id]
   }
